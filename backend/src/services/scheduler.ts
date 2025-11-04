@@ -44,16 +44,16 @@ async function executeTask() {
 
   const taskStatus = getTaskStatus();
   
-  // 检查上次任务是否成功
+  // 检查上次任务是否成功（如果上次执行成功，且距离现在不足1小时，则跳过，避免频繁执行）
   if (taskStatus.lastSuccessTime) {
     const lastSuccessDate = new Date(taskStatus.lastSuccessTime);
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const lastSuccessToday = new Date(lastSuccessDate.getFullYear(), lastSuccessDate.getMonth(), lastSuccessDate.getDate());
+    const timeDiff = now.getTime() - lastSuccessDate.getTime();
+    const oneHour = 60 * 60 * 1000; // 1小时的毫秒数
     
-    // 如果今天已经成功执行过，则不再执行
-    if (lastSuccessToday.getTime() === today.getTime()) {
-      console.log('[定时任务] 今天已经成功执行过，跳过本次执行');
+    // 如果上次成功执行距离现在不足1小时，则跳过（避免频繁执行）
+    if (timeDiff < oneHour) {
+      console.log('[定时任务] 上次成功执行距离现在不足1小时，跳过本次执行');
       return;
     }
   }
@@ -79,12 +79,31 @@ async function executeTask() {
       return; // finally块会重置状态
     }
     
-    // 检查必要字段
-    if (!config.workConfig.project_id || !config.workConfig.task_id || !config.workConfig.hours || !config.workConfig.description) {
-      console.log('[定时任务] 配置缺少必要字段（项目ID、任务ID、工时、描述）');
+    // 检查必要字段（需要项目ID、任务ID和工时）
+    const projectId = config.workConfig?.project_id;
+    const selectedTask = config.selectedTask;
+    const taskIdForApi = selectedTask?.id; // task 对象的 id 字段（用于 new_task-3）
+    
+    if (!projectId || !taskIdForApi || !config.workConfig.hours) {
+      console.log('[定时任务] 配置缺少必要字段（项目ID、任务ID、工时）');
+      console.log('[定时任务] 当前配置:', {
+        project_id: projectId,
+        task_id_for_api: taskIdForApi,
+        task_object: selectedTask,
+        hours: config.workConfig.hours,
+        description: config.workConfig.description
+      });
       setTaskSuccess(false, '配置缺少必要字段');
       return; // finally块会重置状态
     }
+    
+    // 输出配置信息用于调试
+    console.log('[定时任务] 配置验证通过:', {
+      project_id: projectId,
+      task_id_for_api: taskIdForApi,
+      hours: config.workConfig.hours,
+      has_description: !!config.workConfig.description
+    });
 
     // 获取cookie（这里需要先登录）
     let cookie = await login(config.username, config.password);
@@ -134,43 +153,188 @@ async function login(username: string, password: string): Promise<string> {
 }
 
 /**
- * 填写工时
+ * 获取历史填报信息
+ */
+async function getFilledDates(cookie: string, projectId: string, taskId: string): Promise<Set<string>> {
+  const filledDates = new Set<string>();
+  
+  try {
+    const res: any = await Axios.get(addressDomain + 'Helpers/pms/ts_data', {
+      access_token: cookie
+    }, { cookie });
+    
+    if (res && res.code === 0 && res.data && res.data.tss) {
+      const tss = res.data.tss;
+      
+      // tss是一个对象，键是日期字符串，值是该日期的填报记录数组
+      for (const dateStr in tss) {
+        const records = tss[dateStr];
+        if (Array.isArray(records)) {
+          // 检查是否有匹配的项目ID和任务ID的填报记录
+          const hasMatch = records.some((record: any) => {
+            const recordProjectId = record.project_id || record.projectId;
+            const recordTaskId = record.task_id || record.taskId;
+            return recordProjectId === projectId && recordTaskId === taskId;
+          });
+          
+          if (hasMatch) {
+            filledDates.add(dateStr);
+          }
+        }
+      }
+      
+      console.log(`[获取历史填报] 找到 ${filledDates.size} 个已填报的日期`);
+    } else {
+      console.log('[获取历史填报] 未获取到历史填报数据或数据格式不正确');
+    }
+  } catch (error) {
+    console.error('[获取历史填报] 获取历史填报信息失败:', error);
+  }
+  
+  return filledDates;
+}
+
+/**
+ * 生成今天之前40天的日期列表（不包含今天）
+ */
+function generateWorkDateList(): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // 生成今天之前40天的日期（不包含今天）
+  for (let i = 1; i <= 40; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    dates.push(dateStr);
+  }
+  
+  return dates;
+}
+
+/**
+ * 获取未填报的日期列表
+ */
+async function getUnfilledDates(cookie: string, projectId: string, taskId: string): Promise<string[]> {
+  // 生成40天日期列表
+  const allDates = generateWorkDateList();
+  
+  // 获取已填报的日期
+  const filledDates = await getFilledDates(cookie, projectId, taskId);
+  
+  // 筛选出未填报的日期
+  const unfilledDates = allDates.filter(date => !filledDates.has(date));
+  
+  console.log(`[未填报日期] 共 ${allDates.length} 天，已填报 ${filledDates.size} 天，未填报 ${unfilledDates.length} 天`);
+  
+  return unfilledDates;
+}
+
+/**
+ * 填写工时（填写40天内未填写的日期）
  */
 async function fillWorkTime(config: any, cookie: string): Promise<{ success: boolean; message: string }> {
   const workConfig = config.workConfig || {};
   
-  // 获取今天的日期
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  // 获取项目ID和任务ID（用于匹配历史填报）
+  const projectId = workConfig.project_id;
+  const taskId = workConfig.task_id;
   
-  // 构建请求配置
-  const currentConfig = {
-    ...workConfig,
-    'new_notes-2': workConfig.description || '' // 描述信息
-  };
-  
-  try {
-    const res: any = await Axios.get(addressDomain + 'Helpers/pms/ApprovingTs', {
-      access_token: cookie,
-      ts_date: todayStr,
-      ...currentConfig
-    }, { cookie });
-    
-    if (res && res.msg === 'success') {
-      return {
-        success: true,
-        message: `成功填写今天(${todayStr})的工时`
-      };
-    } else {
-      return {
-        success: false,
-        message: res.msg || '填写失败'
-      };
-    }
-  } catch (err: any) {
+  if (!projectId || !taskId) {
     return {
       success: false,
-      message: err ? String(err) : '填写失败'
+      message: '项目ID或任务ID缺失，无法获取历史填报信息'
+    };
+  }
+  
+  // 获取未填报的日期列表（使用project_id和task_id来匹配历史填报）
+  const workDateList = await getUnfilledDates(cookie, projectId, taskId);
+  
+  if (workDateList.length === 0) {
+    console.log('[填写工时] 没有需要填写的日期，所有日期都已填报');
+    return {
+      success: true,
+      message: '所有日期都已填报，无需填写'
+    };
+  }
+  
+  console.log(`[填写工时] 准备填写 ${workDateList.length} 天的工时，日期范围: ${workDateList[workDateList.length - 1]} 至 ${workDateList[0]}`);
+  
+  // 获取任务对象（从保存的配置中）
+  const selectedTask = config.selectedTask;
+  
+  // new_project-3 使用 project_id，new_task-3 使用 task 对象的 id 字段
+  const taskIdForApi = selectedTask?.id; // task 对象的 id 字段（用于 new_task-3）
+  
+  // 构建请求配置 - 参照示例URL的格式
+  // new_project-3 使用 project_id，new_task-3 使用 task 对象的 id 字段
+  const currentConfig: any = {
+    'new_project-3': projectId, // 使用 project_id
+    'new_task-3': taskIdForApi, // 使用 task 对象的 id 字段
+    'new_ts_hour-3': workConfig.hours || '8',
+    'new_notes-3': workConfig.description || ''
+  };
+  
+  // 输出配置信息用于调试
+  console.log(`[填写工时] 工作配置:`, {
+    'new_project-3': currentConfig['new_project-3'],
+    'new_task-3': currentConfig['new_task-3'],
+    'new_ts_hour-3': currentConfig['new_ts_hour-3'],
+    'new_notes-3': currentConfig['new_notes-3']
+  });
+  
+  const successList: string[] = [];
+  const failList: string[] = [];
+  
+  // 遍历日期列表，逐个填写
+  for (const dateStr of workDateList) {
+    try {
+      // 构建API请求参数 - 参照express-ts的逻辑
+      const apiParams = {
+        access_token: cookie,
+        ts_date: dateStr,
+        ...currentConfig
+      };
+      
+      console.log(`[填写工时] 填写日期 ${dateStr}，参数:`, {
+        ts_date: apiParams.ts_date,
+        'new_project-3': apiParams['new_project-3'],
+        'new_task-3': apiParams['new_task-3'],
+        'new_ts_hour-3': apiParams['new_ts_hour-3'],
+        'new_notes-3': apiParams['new_notes-3']
+      });
+      
+      // 使用 SaveTs 接口（参照示例URL）
+      const res: any = await Axios.get(addressDomain + 'Helpers/pms/SaveTs', apiParams, { cookie });
+      
+      if (res && res.msg === 'success') {
+        successList.push(dateStr);
+        console.log(`[填写工时] 成功填写 ${dateStr} 的工时`);
+      } else {
+        // 如果返回失败，可能是该日期已经填写过了，记录但不中断
+        failList.push(dateStr);
+        console.log(`[填写工时] 填写 ${dateStr} 失败: ${res?.msg || '未知错误'}`);
+      }
+    } catch (err: any) {
+      failList.push(dateStr);
+      console.log(`[填写工时] 填写 ${dateStr} 异常: ${err ? String(err) : '未知错误'}`);
+    }
+  }
+  
+  const successCount = successList.length;
+  const failCount = failList.length;
+  const totalCount = workDateList.length;
+  
+  if (successCount > 0) {
+    return {
+      success: true,
+      message: `成功填写 ${successCount}/${totalCount} 天的工时（${failCount} 天可能已填写或失败）`
+    };
+  } else {
+    return {
+      success: false,
+      message: `所有日期都已填写或填写失败（共 ${totalCount} 天）`
     };
   }
 }

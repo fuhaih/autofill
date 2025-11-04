@@ -494,14 +494,15 @@ async function manualFillWorkTime() {
         return;
     }
 
-    // 获取今天的日期
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-    const workList = [todayStr];
+    // 获取选中的项目和任务信息
+    const selectedProjectId = projectSelect.value;
+    const selectedTaskId = taskSelect.value;
+    const selectedProject = allProjectsData[selectedProjectId];
+    const selectedTask = allTasksData[selectedTaskId];
 
     const workConfig = {
-        project_id: projectSelect.value,
-        task_id: taskSelect.value,
+        project_id: selectedProjectId,
+        task_id: selectedTaskId,
         hours: hours || '8',
         description: description
     };
@@ -514,13 +515,17 @@ async function manualFillWorkTime() {
             body: JSON.stringify({
                 username,
                 password,
-                workList,
-                workConfig
+                workList: [], // 不提供workList，让后端自动获取未填报的日期
+                workConfig,
+                selectedProject: selectedProject || undefined,
+                selectedTask: selectedTask || undefined
             })
         });
 
         if (data.code === 200) {
-            showMessage('actionMessage', '填写工时成功！', 'success');
+            const result = data.data || {};
+            const message = result.message || `成功填写 ${result.successCount || 0} 天的工时`;
+            showMessage('actionMessage', message, 'success');
             // 刷新任务状态
             setTimeout(() => {
                 loadTaskStatus();
