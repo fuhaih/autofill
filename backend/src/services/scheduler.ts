@@ -1,5 +1,6 @@
 import { getTaskStatus, setTaskRunning, setTaskSuccess, getConfig } from './database';
 import { Axios } from '../utils/public';
+import { filterHolidays } from '../utils/holiday';
 
 const addressDomain = 'http://pd-reverse.api.senruisoft.com/';
 
@@ -163,21 +164,15 @@ async function getFilledDates(cookie: string, projectId: string, taskId: string)
       access_token: cookie
     }, { cookie });
     
-    if (res && res.code === 0 && res.data && res.data.tss) {
+    if (res && res.code === 0 && res.data) {
       const tss = res.data.tss;
-      
-      // tss是一个对象，键是日期字符串，值是该日期的填报记录数组
-      for (const dateStr in tss) {
-        const records = tss[dateStr];
-        if (Array.isArray(records)) {
-          // 检查是否有匹配的项目ID和任务ID的填报记录
-          const hasMatch = records.some((record: any) => {
-            const recordProjectId = record.project_id || record.projectId;
-            const recordTaskId = record.task_id || record.taskId;
-            return recordProjectId === projectId && recordTaskId === taskId;
-          });
-          
-          if (hasMatch) {
+
+      if (tss) {
+        // tss是一个对象，键是日期字符串，值是该日期的填报记录数组
+        for (const dateStr in tss) {
+          const records = tss[dateStr];
+          if (Array.isArray(records) && records.length > 0 && records.some((record: any) => record.ts_hour && record.ts_hour > 0)) {
+            // 检查是否有匹配的项目ID和任务ID的填报记录
             filledDates.add(dateStr);
           }
         }
@@ -195,12 +190,11 @@ async function getFilledDates(cookie: string, projectId: string, taskId: string)
 }
 
 /**
- * 生成今天之前40天的日期列表（不包含今天）
+ * 生成今天之前40天的日期列表（不包含今天，排除法定节假日）
  */
 function generateWorkDateList(): string[] {
   const dates: string[] = [];
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
   
   // 生成今天之前40天的日期（不包含今天）
   for (let i = 1; i <= 40; i++) {
@@ -209,8 +203,14 @@ function generateWorkDateList(): string[] {
     const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
     dates.push(dateStr);
   }
+  dates.forEach(date => console.log(`[前40日期列表] 原始日期: ${date}`));
   
-  return dates;
+  // 排除法定节假日和周末
+  const workDates = filterHolidays(dates);
+  
+  console.log(`[生成日期列表] 原始40天日期，排除 ${dates.length - workDates.length} 个法定节假日和周末，剩余 ${workDates.length} 个工作日`);
+  
+  return workDates;
 }
 
 /**
@@ -219,16 +219,30 @@ function generateWorkDateList(): string[] {
 async function getUnfilledDates(cookie: string, projectId: string, taskId: string): Promise<string[]> {
   // 生成40天日期列表
   const allDates = generateWorkDateList();
-  
-  // 获取已填报的日期
-  const filledDates = await getFilledDates(cookie, projectId, taskId);
-  
-  // 筛选出未填报的日期
-  const unfilledDates = allDates.filter(date => !filledDates.has(date));
-  
-  console.log(`[未填报日期] 共 ${allDates.length} 天，已填报 ${filledDates.size} 天，未填报 ${unfilledDates.length} 天`);
-  
-  return unfilledDates;
+  allDates.forEach(date => console.log(`[生成日期列表] 原始日期: ${date}`));
+  try {
+    // 获取 tss_hour 数据，筛选出可填报的日期
+    const res: any = await Axios.get(addressDomain + 'Helpers/pms/ts_data', {
+      access_token: cookie
+    }, { cookie });
+    
+
+    console.log(`[未填报日期] 40天范围内共有 ${allDates.length} 天工作日`);
+    
+    // 获取已填报的日期
+    const filledDates = await getFilledDates(cookie, projectId, taskId);
+    
+    // 筛选出未填报的日期（在40天范围内且在 tss_hour 中，且未填报）
+    const unfilledDates = allDates.filter(date => !filledDates.has(date));
+    
+    console.log(`[未填报日期] 已填报 ${filledDates.size} 天，未填报 ${unfilledDates.length} 天`);
+    
+    return unfilledDates;
+  } catch (error) {
+    console.error('[未填报日期] 获取数据失败，使用所有40天日期:', error);
+    // 如果获取失败，返回所有40天日期（降级处理）
+    return allDates;
+  }
 }
 
 /**
