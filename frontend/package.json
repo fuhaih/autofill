@@ -1,0 +1,15 @@
+{
+  "name": "autofill-frontend",
+  "version": "1.0.0",
+  "description": "自动填写工时前端页面",
+  "scripts": {
+    "build": "node build.js",
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\""
+  },
+  "author": "jonexu",
+  "license": "ISC",
+  "devDependencies": {
+    "fs-extra": "^11.2.0"
+  }
+}
+

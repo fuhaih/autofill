@@ -1,0 +1,22 @@
+{
+  "name": "autofill",
+  "version": "1.0.0",
+  "description": "自动填写工时系统 - 前后端统一打包项目",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm start",
+    "clean": "cd frontend && npm run clean && cd ../backend && node -e \"require('fs').rmSync('build', {recursive: true, force: true})\"",
+    "forever-start": "cd backend && npm run forever-start",
+    "stop-all": "cd backend && npm run stop-all"
+  },
+  "author": "jonexu",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
+

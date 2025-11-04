@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动填写工时系统</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>自动填写工时系统</h1>
+            <div class="version-info">版本: <span id="version">-</span></div>
+        </header>
+
+        <main class="main-content">
+            <!-- 配置管理区域 -->
+            <section class="config-section card">
+                <h2>配置管理</h2>
+                <div class="form-group">
+                    <label for="username">用户名：</label>
+                    <input type="text" id="username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码：</label>
+                    <input type="password" id="password" placeholder="请输入密码">
+                </div>
+                <div class="form-group">
+                    <label for="workList">工作日期列表（每行一个日期，格式：YYYY-MM-DD）：</label>
+                    <textarea id="workList" rows="5" placeholder="例如：&#10;2024-01-01&#10;2024-01-02"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="projectId">项目ID：</label>
+                    <input type="text" id="projectId" placeholder="请输入项目ID">
+                </div>
+                <div class="form-group">
+                    <label for="hours">工时：</label>
+                    <input type="text" id="hours" placeholder="例如：8" value="8">
+                </div>
+                <div class="form-group">
+                    <label for="descList">工作描述列表（每行一个描述，会随机选择）：</label>
+                    <textarea id="descList" rows="5" placeholder="例如：&#10;开发新功能&#10;修复bug&#10;代码review"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="workType">工作类型：</label>
+                    <input type="text" id="workType" placeholder="工作类型（可选）">
+                </div>
+                <div class="button-group">
+                    <button id="loadConfig" class="btn btn-secondary">加载配置</button>
+                    <button id="saveConfig" class="btn btn-primary">保存配置</button>
+                </div>
+                <div id="configMessage" class="message"></div>
+            </section>
+
+            <!-- 任务状态区域 -->
+            <section class="status-section card">
+                <h2>任务状态</h2>
+                <div class="status-info">
+                    <div class="status-item">
+                        <label>最后执行时间：</label>
+                        <span id="lastExecuteTime">-</span>
+                    </div>
+                    <div class="status-item">
+                        <label>最后成功时间：</label>
+                        <span id="lastSuccessTime">-</span>
+                    </div>
+                    <div class="status-item">
+                        <label>是否运行中：</label>
+                        <span id="isRunning">-</span>
+                    </div>
+                    <div class="status-item">
+                        <label>上次执行结果：</label>
+                        <span id="lastResult">-</span>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button id="refreshStatus" class="btn btn-secondary">刷新状态</button>
+                    <button id="syncWorkInfo" class="btn btn-secondary">同步工作信息</button>
+                </div>
+                <div id="statusMessage" class="message"></div>
+            </section>
+
+            <!-- 手动操作区域 -->
+            <section class="action-section card">
+                <h2>手动操作</h2>
+                <div class="button-group">
+                    <button id="manualFill" class="btn btn-primary">手动填写工时</button>
+                </div>
+                <div id="actionMessage" class="message"></div>
+            </section>
+
+            <!-- 工作信息显示区域 -->
+            <section class="work-info-section card" id="workInfoSection" style="display: none;">
+                <h2>工作信息</h2>
+                <div id="workInfo" class="work-info-content"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="./js/main.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 10
+    },
+    "auditLog": "/Users/jonexu/SelfGit/ConciseHome/express-ts/src/log/.audit.json",
+    "files": [
+        {
+            "date": 1751274880736,
+            "name": "/Users/jonexu/SelfGit/ConciseHome/express-ts/src/log/morgan-20250630.log",
+            "hash": "b50d9720f12eab26f922962210c55abd"
+        },
+        {
+            "date": 1751336360373,
+            "name": "/Users/jonexu/SelfGit/ConciseHome/express-ts/src/log/morgan-20250701.log",
+            "hash": "642f8b5b5831f01948adcef22021e40d"
+        },
+        {
+            "date": 1751431845856,
+            "name": "/Users/jonexu/SelfGit/ConciseHome/express-ts/src/log/morgan-20250702.log",
+            "hash": "b12db35c355d00f2cb9e0c9f274bc294"
+        }
+    ],
+    "hashType": "md5"
+}

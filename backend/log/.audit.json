@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 10
+    },
+    "auditLog": "D:\\WorkSpace\\Source\\aliworkspace\\autofill\\backend\\log/.audit.json",
+    "files": [
+        {
+            "date": 1762165228116,
+            "name": "D:\\WorkSpace\\Source\\aliworkspace\\autofill\\backend\\log\\morgan-20251103.log",
+            "hash": "d1e5c443a525045584ccfa640775a540"
+        }
+    ],
+    "hashType": "md5"
+}

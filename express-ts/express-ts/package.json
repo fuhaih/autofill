@@ -1,0 +1,31 @@
+{
+  "name": "express-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.ts",
+  "scripts": {
+    "dev": "export NODE_ENV=dev&& ts-node ./src/app.ts",
+    "test": "export NODE_ENV=prod&&node ./build/release/app.js",
+    "build": "tsc&&forever start ./build/release/app.js",
+    "stop-all": "forever stopall&& forever cleanlogs",
+    "run-list": "forever list",
+    "forever-start": "export NODE_ENV=prod&&forever start --minUptime 1000 --spinSleepTime 3600000 ./build/release/app.js"
+  },
+  "author": "jonexu",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.4",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.17.2",
+    "express-session": "^1.18.1",
+    "file-stream-rotator": "^0.6.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.23",
+    "@types/node": "^17.0.45",
+    "ts-node": "^10.9.2",
+    "typescript": "^4.5.5"
+  }
+}

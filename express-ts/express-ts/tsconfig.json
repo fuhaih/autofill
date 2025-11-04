@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "target": "es6",
+    "baseUrl": "./src", // 所有目录的起始点
+    "outDir": "./build/release", // 打包文件输出位置
+    "removeComments": true, // 移除注释
+    "noUnusedLocals":false,//检查未使用的局部变量
+    "noUnusedParameters":false,//检查未使用的参数
+    "noEmitOnError":false, //有错误的情况下不进行编译 默认值：false
+    // "strict": true,
+  },
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    // "./src/dist/*"
+    "node_modules/**/*"
+  ]
+}
