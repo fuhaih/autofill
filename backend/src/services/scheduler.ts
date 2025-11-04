@@ -73,9 +73,16 @@ async function executeTask() {
     const config = getConfig();
     
     // 检查配置是否完整
-    if (!config.workConfig || !config.username || !config.password || !config.workList || config.workList.length === 0) {
+    if (!config.workConfig || !config.username || !config.password) {
       console.log('[定时任务] 配置不完整，跳过执行');
       setTaskSuccess(false, '配置不完整');
+      return; // finally块会重置状态
+    }
+    
+    // 检查必要字段
+    if (!config.workConfig.project_id || !config.workConfig.task_id || !config.workConfig.hours || !config.workConfig.description) {
+      console.log('[定时任务] 配置缺少必要字段（项目ID、任务ID、工时、描述）');
+      setTaskSuccess(false, '配置缺少必要字段');
       return; // finally块会重置状态
     }
 
@@ -130,48 +137,41 @@ async function login(username: string, password: string): Promise<string> {
  * 填写工时
  */
 async function fillWorkTime(config: any, cookie: string): Promise<{ success: boolean; message: string }> {
-  const workList = config.workList || [];
-  const descList = config.descList || [];
   const workConfig = config.workConfig || {};
   
-  const finishList: boolean[] = [];
+  // 获取今天的日期
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
   
-  for (let i = 0; i < workList.length; i++) {
-    // 如果有多条描述，随机选择一条
-    let currentConfig = { ...workConfig };
-    if (descList && descList.length > 1) {
-      const randomDesc = descList[Math.floor(Math.random() * descList.length)];
-      if (randomDesc) {
-        currentConfig['new_notes-2'] = randomDesc;
-      }
-    }
+  // 构建请求配置
+  const currentConfig = {
+    ...workConfig,
+    'new_notes-2': workConfig.description || '' // 描述信息
+  };
+  
+  try {
+    const res: any = await Axios.get(addressDomain + 'Helpers/pms/ApprovingTs', {
+      access_token: cookie,
+      ts_date: todayStr,
+      ...currentConfig
+    }, { cookie });
     
-    try {
-      const res: any = await Axios.get(addressDomain + 'Helpers/pms/ApprovingTs', {
-        access_token: cookie,
-        ts_date: workList[i],
-        ...currentConfig
-      }, { cookie });
-      
-      if (res && res.msg === 'success') {
-        finishList.push(true);
-      } else {
-        return {
-          success: false,
-          message: res.msg || '填写失败'
-        };
-      }
-    } catch (err: any) {
+    if (res && res.msg === 'success') {
+      return {
+        success: true,
+        message: `成功填写今天(${todayStr})的工时`
+      };
+    } else {
       return {
         success: false,
-        message: err ? String(err) : '填写失败'
+        message: res.msg || '填写失败'
       };
     }
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err ? String(err) : '填写失败'
+    };
   }
-  
-  return {
-    success: finishList.length === workList.length,
-    message: `成功填写 ${finishList.length}/${workList.length} 条工时`
-  };
 }
 

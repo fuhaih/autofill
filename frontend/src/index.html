@@ -26,24 +26,29 @@
                     <input type="password" id="password" placeholder="请输入密码">
                 </div>
                 <div class="form-group">
-                    <label for="workList">工作日期列表（每行一个日期，格式：YYYY-MM-DD）：</label>
-                    <textarea id="workList" rows="5" placeholder="例如：&#10;2024-01-01&#10;2024-01-02"></textarea>
+                    <button id="fetchProjects" class="btn btn-secondary">拉取项目</button>
+                    <div id="fetchProjectsMessage" class="message"></div>
+                </div>
+                <!-- 项目选择区域 -->
+                <div class="form-group" id="projectSelectionGroup" style="display: none;">
+                    <label for="projectSelect">选择项目 <span style="color: red;">*</span>：</label>
+                    <select id="projectSelect" class="form-select" required>
+                        <option value="">-- 请选择项目 --</option>
+                    </select>
+                </div>
+                <div class="form-group" id="taskSelectionGroup" style="display: none;">
+                    <label for="taskSelect">选择任务 <span style="color: red;">*</span>：</label>
+                    <select id="taskSelect" class="form-select" required>
+                        <option value="">-- 请先选择项目 --</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label for="projectId">项目ID：</label>
-                    <input type="text" id="projectId" placeholder="请输入项目ID">
+                    <label for="hours">工时 <span style="color: red;">*</span>：</label>
+                    <input type="number" id="hours" placeholder="例如：8" value="8" min="0" max="24" step="0.5" required>
                 </div>
                 <div class="form-group">
-                    <label for="hours">工时：</label>
-                    <input type="text" id="hours" placeholder="例如：8" value="8">
-                </div>
-                <div class="form-group">
-                    <label for="descList">工作描述列表（每行一个描述，会随机选择）：</label>
-                    <textarea id="descList" rows="5" placeholder="例如：&#10;开发新功能&#10;修复bug&#10;代码review"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="workType">工作类型：</label>
-                    <input type="text" id="workType" placeholder="工作类型（可选）">
+                    <label for="description">工作描述 <span style="color: red;">*</span>：</label>
+                    <textarea id="description" rows="3" placeholder="请输入工作描述" required></textarea>
                 </div>
                 <div class="button-group">
                     <button id="loadConfig" class="btn btn-secondary">加载配置</button>
@@ -100,4 +105,5 @@
     <script src="./js/main.js"></script>
 </body>
 </html>
+
 

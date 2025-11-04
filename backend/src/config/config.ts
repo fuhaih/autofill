@@ -12,3 +12,4 @@ export const sessionConfig = {
   cookie: { maxAge: 1000 * 3600 * 24, secure: false }
 }
 
+

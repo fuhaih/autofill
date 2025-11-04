@@ -74,6 +74,24 @@ module.exports = () => {
     getUserProject(cookie);
   });
 
+  // 拉取项目列表（通过账户密码）
+  route.post('/fetchProjects', async (req: any, res: Response) => {
+    checkParameter(['username', 'password'], req.body, async (body: any) => {
+      try {
+        // 先登录获取cookie
+        const cookie = await toAnxhitLoginWithCredentials(body.username, body.password);
+        if (!cookie) {
+          responseError('登录失败，无法获取认证信息');
+          return;
+        }
+        // 获取项目列表
+        getUserProject(cookie);
+      } catch (error: any) {
+        responseError('拉取项目失败: ' + (error.message || error));
+      }
+    });
+  });
+
   // 自动填写工时（手动触发）
   route.post('/AutoWorkTime', async (req: any, res: Response) => {
     let cookie = req.session.anxhit_token;
@@ -155,7 +173,7 @@ function getUserProject(cookie: string) {
   });
 }
 
-// 登录
+// 登录（通过请求参数）
 async function toAnxhitLogin(req: any): Promise<string> {
   let backInfo = '';
   const send = Object.keys(req.body).length ? req.body : req.query;
@@ -169,6 +187,25 @@ async function toAnxhitLogin(req: any): Promise<string> {
     }
   }).catch((err: any) => {
     responseError('登录请求错误' + err);
+  });
+  return backInfo;
+}
+
+// 登录（通过账户密码）
+async function toAnxhitLoginWithCredentials(username: string, password: string): Promise<string> {
+  let backInfo = '';
+  await Axios.get(addressDomain + 'NoAuth/Login', {
+    username,
+    password
+  }).then((res: any) => {
+    if (res.code === 0) {
+      backInfo = res.data.cookie;
+      console.log('获取新cookie_', backInfo);
+    } else {
+      throw new Error(res.msg || '登录失败');
+    }
+  }).catch((err: any) => {
+    throw new Error(err?.message || '登录请求错误');
   });
   return backInfo;
 }
@@ -225,4 +262,5 @@ function getICBSentence(date: string) {
     responseError(err);
   });
 }
+
 

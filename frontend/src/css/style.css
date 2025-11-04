@@ -83,7 +83,8 @@ body {
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -94,9 +95,15 @@ body {
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
     outline: none;
     border-color: #667eea;
+}
+
+.form-group select {
+    background-color: white;
+    cursor: pointer;
 }
 
 .form-group textarea {
@@ -242,4 +249,45 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* 项目列表样式 */
+.project-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.project-item {
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #f9f9f9;
+    transition: all 0.2s;
+}
+
+.project-item:hover {
+    background: #e9e9e9;
+    border-color: #667eea;
+}
+
+.project-item.selected {
+    border: 2px solid #007bff;
+    background: #e7f3ff;
+}
+
+.selected-project-info {
+    margin-top: 15px;
+    padding: 12px;
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 5px;
+    color: #004085;
+}
+
+.selected-project-info strong {
+    margin-right: 8px;
+}
+
 

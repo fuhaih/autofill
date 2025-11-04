@@ -20,8 +20,8 @@ interface Database {
     workConfig?: any;
     username?: string;
     password?: string;
-    workList?: string[];
-    descList?: string[];
+    selectedProject?: any; // 选中的项目信息
+    selectedTask?: any; // 选中的任务信息
     lastUpdateTime?: string;
   };
   taskStatus: {
