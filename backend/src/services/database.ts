@@ -22,6 +22,8 @@ interface Database {
     password?: string;
     selectedProject?: any; // 选中的项目信息
     selectedTask?: any; // 选中的任务信息
+    projectsList?: any[]; // 存储的项目列表
+    tasksList?: any[]; // 存储的任务列表
     lastUpdateTime?: string;
   };
   taskStatus: {

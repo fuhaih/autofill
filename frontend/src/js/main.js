@@ -59,8 +59,6 @@ let allProjectsData = {};
 let allTasksData = {};
 // 存储原始数据（用于调试和分析）
 let rawProjectsData = null;
-// 存储待恢复的配置（用于拉取项目后恢复选中状态）
-let pendingRestoreConfig = null;
 
 // 加载配置
 async function loadConfig() {
@@ -77,25 +75,59 @@ async function loadConfig() {
                 document.getElementById('description').value = config.workConfig.description || config.description || '';
             }
             
-            // 保存待恢复的配置
-            if (config.selectedProject || config.workConfig?.project_id || config.selectedTask || config.workConfig?.task_id) {
-                pendingRestoreConfig = {
-                    projectId: config.selectedProject?.project_id || config.selectedProject?.id || config.workConfig?.project_id,
-                    taskId: config.selectedTask?.task_id || config.selectedTask?.ts_id || config.selectedTask?.id || config.workConfig?.task_id
-                };
-                
-                // 如果已经拉取过项目，立即恢复选中状态
-                if (currentProjects.length > 0 && pendingRestoreConfig.projectId) {
-                    restoreProjectSelection();
-                }
-                // 如果已经拉取过任务，立即恢复选中状态
-                if (currentTasks.length > 0 && pendingRestoreConfig.taskId) {
+            // 从配置中读取项目和任务列表
+            if (config.projectsList && Array.isArray(config.projectsList) && config.projectsList.length > 0) {
+                currentProjects = config.projectsList;
+                // 存储项目数据
+                allProjectsData = {};
+                currentProjects.forEach((project, index) => {
+                    const projectId = project.project_id || project.projectId || project.id || project.value || index;
+                    if (projectId !== undefined && projectId !== null && projectId !== '') {
+                        allProjectsData[projectId] = project;
+                    }
+                });
+                // 显示项目下拉列表
+                displayProjectSelect(currentProjects);
+                document.getElementById('projectSelectionGroup').style.display = 'block';
+            }
+            
+            if (config.tasksList && Array.isArray(config.tasksList) && config.tasksList.length > 0) {
+                currentTasks = config.tasksList;
+                // 存储任务数据
+                allTasksData = {};
+                currentTasks.forEach((task, index) => {
+                    const taskId = task.task_id || task.taskId || task.ts_id || task.id || task.value || index;
+                    if (taskId !== undefined && taskId !== null && taskId !== '') {
+                        allTasksData[taskId] = task;
+                    }
+                });
+                // 显示任务下拉列表
+                displayTaskSelect(currentTasks);
+                document.getElementById('taskSelectionGroup').style.display = 'block';
+            }
+            
+            // 选中配置中的项目和任务
+            if (config.selectedProject || config.workConfig?.project_id) {
+                const projectId = config.selectedProject?.project_id || config.selectedProject?.id || config.workConfig?.project_id;
+                if (projectId) {
                     setTimeout(() => {
-                        const taskSelect = document.getElementById('taskSelect');
-                        if (taskSelect && taskSelect.querySelector(`option[value="${pendingRestoreConfig.taskId}"]`)) {
-                            taskSelect.value = pendingRestoreConfig.taskId;
+                        const projectSelect = document.getElementById('projectSelect');
+                        if (projectSelect && projectSelect.querySelector(`option[value="${projectId}"]`)) {
+                            projectSelect.value = projectId;
                         }
                     }, 100);
+                }
+            }
+            
+            if (config.selectedTask || config.workConfig?.task_id) {
+                const taskId = config.selectedTask?.task_id || config.selectedTask?.ts_id || config.selectedTask?.id || config.workConfig?.task_id;
+                if (taskId) {
+                    setTimeout(() => {
+                        const taskSelect = document.getElementById('taskSelect');
+                        if (taskSelect && taskSelect.querySelector(`option[value="${taskId}"]`)) {
+                            taskSelect.value = taskId;
+                        }
+                    }, 200);
                 }
             }
             
@@ -162,7 +194,9 @@ async function saveConfig() {
         password,
         workConfig,
         selectedProject: selectedProject || undefined,
-        selectedTask: selectedTask || undefined
+        selectedTask: selectedTask || undefined,
+        projectsList: currentProjects.length > 0 ? currentProjects : undefined,
+        tasksList: currentTasks.length > 0 ? currentTasks : undefined
     };
 
     try {
@@ -347,18 +381,57 @@ async function fetchProjects() {
                 document.getElementById('taskSelectionGroup').style.display = 'block';
             }
             
-            // 如果有待恢复的配置，恢复选中状态
-            if (pendingRestoreConfig) {
-                if (pendingRestoreConfig.projectId && currentProjects.length > 0) {
-                    restoreProjectSelection();
-                }
-                if (pendingRestoreConfig.taskId && currentTasks.length > 0) {
-                    setTimeout(() => {
-                        const taskSelect = document.getElementById('taskSelect');
-                        if (taskSelect && taskSelect.querySelector(`option[value="${pendingRestoreConfig.taskId}"]`)) {
-                            taskSelect.value = pendingRestoreConfig.taskId;
+            // 先获取当前配置，以便恢复选中状态
+            let currentConfigData = null;
+            try {
+                const currentConfigResponse = await apiRequest('/config');
+                if (currentConfigResponse.code === 200) {
+                    currentConfigData = currentConfigResponse.data;
+                    
+                    // 恢复选中状态（从配置中读取）
+                    if (currentConfigData.selectedProject || currentConfigData.workConfig?.project_id) {
+                        const projectId = currentConfigData.selectedProject?.project_id || currentConfigData.selectedProject?.id || currentConfigData.workConfig?.project_id;
+                        if (projectId && currentProjects.length > 0) {
+                            setTimeout(() => {
+                                const projectSelect = document.getElementById('projectSelect');
+                                if (projectSelect && projectSelect.querySelector(`option[value="${projectId}"]`)) {
+                                    projectSelect.value = projectId;
+                                }
+                            }, 100);
                         }
-                    }, 100);
+                    }
+                    
+                    if (currentConfigData.selectedTask || currentConfigData.workConfig?.task_id) {
+                        const taskId = currentConfigData.selectedTask?.task_id || currentConfigData.selectedTask?.ts_id || currentConfigData.selectedTask?.id || currentConfigData.workConfig?.task_id;
+                        if (taskId && currentTasks.length > 0) {
+                            setTimeout(() => {
+                                const taskSelect = document.getElementById('taskSelect');
+                                if (taskSelect && taskSelect.querySelector(`option[value="${taskId}"]`)) {
+                                    taskSelect.value = taskId;
+                                }
+                            }, 200);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('获取当前配置失败:', error);
+            }
+            
+            // 保存项目和任务列表到配置（自动保存，无需用户点击保存）
+            if (currentProjects.length > 0 || currentTasks.length > 0) {
+                try {
+                    const configToSave = {
+                        ...(currentConfigData || {}),
+                        projectsList: currentProjects.length > 0 ? currentProjects : (currentConfigData?.projectsList || undefined),
+                        tasksList: currentTasks.length > 0 ? currentTasks : (currentConfigData?.tasksList || undefined)
+                    };
+                    await apiRequest('/config', {
+                        method: 'POST',
+                        body: JSON.stringify(configToSave)
+                    });
+                    console.log('项目和任务列表已自动保存到配置');
+                } catch (error) {
+                    console.error('自动保存项目和任务列表失败:', error);
                 }
             }
             
@@ -435,30 +508,8 @@ function displayTaskSelect(tasks) {
     });
     
     console.log(`任务下拉列表已生成，共 ${taskSelect.options.length - 1} 个任务选项`);
-    
-    // 如果有待恢复的任务ID，恢复选中状态
-    if (pendingRestoreConfig && pendingRestoreConfig.taskId) {
-        const taskId = pendingRestoreConfig.taskId;
-        setTimeout(() => {
-            if (taskSelect.querySelector(`option[value="${taskId}"]`)) {
-                taskSelect.value = taskId;
-            }
-            pendingRestoreConfig.taskId = null;
-        }, 100);
-    }
 }
 
-// 恢复项目选择状态
-function restoreProjectSelection() {
-    if (!pendingRestoreConfig || !pendingRestoreConfig.projectId) {
-        return;
-    }
-    
-    const projectSelect = document.getElementById('projectSelect');
-    if (projectSelect && projectSelect.querySelector(`option[value="${pendingRestoreConfig.projectId}"]`)) {
-        projectSelect.value = pendingRestoreConfig.projectId;
-    }
-}
 
 // 同步工作信息
 async function syncWorkInfo() {

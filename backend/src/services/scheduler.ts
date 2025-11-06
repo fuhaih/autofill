@@ -208,7 +208,7 @@ function generateWorkDateList(): string[] {
   // 排除法定节假日和周末
   const workDates = filterHolidays(dates);
   
-  console.log(`[生成日期列表] 原始40天日期，排除 ${dates.length - workDates.length} 个法定节假日和周末，剩余 ${workDates.length} 个工作日`);
+  //console.log(`[生成日期列表] 原始40天日期，排除 ${dates.length - workDates.length} 个法定节假日和周末，剩余 ${workDates.length} 个工作日`);
   
   return workDates;
 }
@@ -219,7 +219,7 @@ function generateWorkDateList(): string[] {
 async function getUnfilledDates(cookie: string, projectId: string, taskId: string): Promise<string[]> {
   // 生成40天日期列表
   const allDates = generateWorkDateList();
-  allDates.forEach(date => console.log(`[生成日期列表] 原始日期: ${date}`));
+  //allDates.forEach(date => console.log(`[生成日期列表] 原始日期: ${date}`));
   try {
     // 获取 tss_hour 数据，筛选出可填报的日期
     const res: any = await Axios.get(addressDomain + 'Helpers/pms/ts_data', {
